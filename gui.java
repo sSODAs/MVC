@@ -9,6 +9,8 @@ public class gui extends JFrame {
     private JButton cal;
     private Logic logic;
 
+    // View ZONE
+
     public gui() {
 
         logic = new Logic();
@@ -21,7 +23,7 @@ public class gui extends JFrame {
         p = new JPanel();
         p.setLayout(null);
 
-        JLabel Text = new JLabel("Text");
+        JLabel Text = new JLabel("Input");
         Text.setBounds(20, 40, 80, 25);
         p.add(Text);
 
