@@ -1,10 +1,12 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import javax.swing.*;
+
+// Controller ZONE (Main logic class that handles the interaction between GUI and database.)
 
 public class Logic {
 
@@ -16,31 +18,35 @@ public class Logic {
         cowHandler = new CowHandler();
     }
 
-    // Method to handle calculations when the button is clicked
+    // Handles calculations when the button is clicked.
+
     public void handleCalculate(JTextField inputField, JTextArea outputArea) {
         String input = inputField.getText(); // Get input from the text field
         String result = checkDatabase.checkAnimal(input); // Validate and check animal info
         outputArea.setText(result); // Display result in the text area
     }
 
-    // Inner class responsible for handling database operations
+    // Inner class responsible for handling database operations.
+
     public class CheckDatabase {
-        private List<Animal> animals;
+        private Map<String, Animal> animalMap;
 
         // Constructor to load animal data from the CSV file
         public CheckDatabase() {
-            animals = loadAnimals("data.csv");
+            animalMap = new HashMap<>();
+            loadAnimals("data.csv");
         }
 
-        // Method to read data from CSV file and create Animal objects
-        private List<Animal> loadAnimals(String filePath) {
-            List<Animal> animalList = new ArrayList<>();
+        // Reads data from CSV file and creates Animal objects.
+
+        private void loadAnimals(String filePath) {
             try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
                 String line;
                 br.readLine(); // Skip the header line
                 while ((line = br.readLine()) != null) {
                     String[] parts = line.split(",");
                     if (parts.length < 5) {
+                        System.err.println("Invalid line format: " + line);
                         continue; // Ensure there are enough columns
                     }
 
@@ -50,22 +56,16 @@ public class Logic {
                     int ageMonths = parseIntSafely(parts[3].trim(), 0);
                     Integer udders = parseIntSafely(parts[4].trim(), null);
 
-                    // Check if the type is valid
-                    if (type.isEmpty()) {
-                        System.err.println("Skipping line due to missing animal type: " + line);
-                        continue;
-                    }
-
-                    // Add only valid animals to the list
-                    animalList.add(new Animal(id, type, ageYears, ageMonths, udders));
+                    // Add only valid animals to the map
+                    animalMap.put(id, new Animal(id, type, ageYears, ageMonths, udders));
                 }
             } catch (IOException e) {
                 System.err.println("Error reading the CSV file: " + e.getMessage());
             }
-            return animalList;
         }
 
-        // Utility method to safely parse integers from a string
+        // Utility method to safely parse integers from a string.
+
         private Integer parseIntSafely(String value, Integer defaultValue) {
             try {
                 return value.isEmpty() ? defaultValue : Integer.parseInt(value);
@@ -74,35 +74,26 @@ public class Logic {
             }
         }
 
-        // Method to check the animal data based on the provided ID
+        // Checks the animal data based on the provided ID.
+
         public String checkAnimal(String id) {
-            // Validate that the ID is 8 digits long and doesn't start with 0
             if (!isValidId(id)) {
-                return "Invalid ID: must be 8 digits or not start with 0.";
+                return "Invalid ID: must be 8 digits and cannot start with 0.";
             }
 
-            // Find the animal by ID
             Animal animal = getAnimalById(id);
             if (animal != null) {
                 return getAnimalInfo(animal);
             }
-            return "This animal has not been found.";
-            // Return if no animal was found
-
+            return "Animal with ID " + id + " not found.";
         }
 
-        // Method to validate the ID format
-        private boolean isValidId(String line) {
-            String[] parts = line.split(",");
-            if (parts.length == 0)
-                return false; // If the line is empty or invalid
-
-            String id = parts[0].trim(); // Get the ID and remove extra whitespace if any
+        private boolean isValidId(String id) {
             return id.length() == 8 && id.matches("[1-9][0-9]{7}");
         }
 
-        // Method to return the correct message based on the animal's type and
-        // attributes
+        // Returns the correct message based on the animal's type and attributes.
+
         private String getAnimalInfo(Animal animal) {
             String type = animal.getType().toLowerCase().trim();
 
@@ -130,18 +121,15 @@ public class Logic {
             }
         }
 
-        // Method to find an animal by ID
+        // Finds an animal by ID.
+
         private Animal getAnimalById(String animalId) {
-            for (Animal animal : animals) {
-                if (animal.getId().equals(animalId)) {
-                    return animal;
-                }
-            }
-            return null;
+            return animalMap.get(animalId);
         }
     }
 
-    // Inner class for handling cow-specific logic
+    // Inner class for handling cow-specific logic.
+
     public class CowHandler {
         private MilkCalculator milkCalculator;
 
@@ -149,9 +137,10 @@ public class Logic {
             this.milkCalculator = new MilkCalculator();
         }
 
-        // Handle cow with 4 udders
+        // Handles cow with 4 udders.
+
         public void handleCowWithFourUdders(Animal cow) {
-            if (cow.getUdders() == 4) {
+            if (cow != null && cow.getUdders() != null && cow.getUdders() == 4) {
                 Random rand = new Random();
                 if (rand.nextInt(100) < 5) {
                     cow.setUdders(3); // Update udders count
@@ -160,12 +149,15 @@ public class Logic {
                     int milkProduction = milkCalculator.calculateMilkProduction(cow);
                     System.out.println("The cow has been milked, producing: " + milkProduction + " liters");
                 }
+            } else {
+                System.out.println("Invalid cow or udders information.");
             }
         }
 
-        // Handle cow with 3 udders
+        // Handles cow with 3 udders.
+
         public void handleCowWithThreeUdders(Animal cow) {
-            if (cow.getUdders() == 3) {
+            if (cow != null && cow.getUdders() != null && cow.getUdders() == 3) {
                 Random rand = new Random();
                 if (rand.nextInt(100) < 20) {
                     cow.setUdders(4); // Update udders count
@@ -175,16 +167,18 @@ public class Logic {
                 }
             }
         }
-
     }
 
-    // Inner class representing an animal
+    // MODEL ZONE
+
     public class Animal {
         private String id;
         private String type;
         private int ageYears;
         private int ageMonths;
         private Integer udders;
+
+        // Constructs an Animal with the given attributes.
 
         public Animal(String id, String type, int ageYears, int ageMonths, Integer udders) {
             this.id = id;
@@ -195,6 +189,7 @@ public class Logic {
         }
 
         // Getters and Setters
+
         public String getId() {
             return id;
         }
@@ -219,16 +214,19 @@ public class Logic {
             this.udders = udders;
         }
 
-        // Calculate milk production
+        // Calculates the milk production based on the animal's age.
+
         public int calculateMilkProduction() {
             return ageYears + ageMonths;
         }
     }
 
-    // Inner class for MilkCalculator
+    // Inner class for MilkCalculator.
+
     public class MilkCalculator {
 
-        // Function to calculate milk production from a cow
+        // Calculates milk production for a cow.
+
         public int calculateMilkProduction(Animal cow) {
             if (cow.getType().equalsIgnoreCase("Cow")) {
                 return cow.getAgeYears() + cow.getAgeMonths();
@@ -236,5 +234,4 @@ public class Logic {
             return 0; // No milk production if not a cow
         }
     }
-
 }
